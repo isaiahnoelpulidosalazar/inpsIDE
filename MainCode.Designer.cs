@@ -35,7 +35,7 @@
             // 
             // verticalList1
             // 
-            verticalList1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
+            verticalList1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             verticalList1.AutoScroll = true;
             verticalList1.BorderStyle = BorderStyle.FixedSingle;
             verticalList1.FlowDirection = FlowDirection.TopDown;
