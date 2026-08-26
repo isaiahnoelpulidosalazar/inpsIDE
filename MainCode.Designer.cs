@@ -28,23 +28,23 @@
         /// </summary>
         private void InitializeComponent()
         {
-            verticalList1 = new inpsNuGet.VerticalList();
+            recentProjectList = new inpsNuGet.VerticalList();
             createProjectButton = new Button();
             openProjectButton = new Button();
             SuspendLayout();
             // 
-            // verticalList1
+            // recentProjectList
             // 
-            verticalList1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            verticalList1.AutoScroll = true;
-            verticalList1.BorderStyle = BorderStyle.FixedSingle;
-            verticalList1.FlowDirection = FlowDirection.TopDown;
-            verticalList1.Location = new Point(12, 12);
-            verticalList1.Name = "verticalList1";
-            verticalList1.Padding = new Padding(0, 0, 0, 3);
-            verticalList1.Size = new Size(390, 321);
-            verticalList1.TabIndex = 0;
-            verticalList1.WrapContents = false;
+            recentProjectList.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            recentProjectList.AutoScroll = true;
+            recentProjectList.BorderStyle = BorderStyle.FixedSingle;
+            recentProjectList.FlowDirection = FlowDirection.TopDown;
+            recentProjectList.Location = new Point(12, 12);
+            recentProjectList.Name = "recentProjectList";
+            recentProjectList.Padding = new Padding(0, 0, 0, 3);
+            recentProjectList.Size = new Size(390, 321);
+            recentProjectList.TabIndex = 0;
+            recentProjectList.WrapContents = false;
             // 
             // createProjectButton
             // 
@@ -75,7 +75,7 @@
             ClientSize = new Size(618, 345);
             Controls.Add(openProjectButton);
             Controls.Add(createProjectButton);
-            Controls.Add(verticalList1);
+            Controls.Add(recentProjectList);
             Name = "MainCode";
             StartPosition = FormStartPosition.CenterScreen;
             Text = "inpsIDE";
@@ -84,7 +84,7 @@
 
         #endregion
 
-        private inpsNuGet.VerticalList verticalList1;
+        private inpsNuGet.VerticalList recentProjectList;
         private Button createProjectButton;
         private Button openProjectButton;
     }
