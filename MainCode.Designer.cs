@@ -42,14 +42,14 @@
             recentProjectList.Location = new Point(12, 12);
             recentProjectList.Name = "recentProjectList";
             recentProjectList.Padding = new Padding(0, 0, 0, 3);
-            recentProjectList.Size = new Size(390, 321);
+            recentProjectList.Size = new Size(476, 417);
             recentProjectList.TabIndex = 0;
             recentProjectList.WrapContents = false;
             // 
             // createProjectButton
             // 
             createProjectButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            createProjectButton.Location = new Point(408, 12);
+            createProjectButton.Location = new Point(494, 12);
             createProjectButton.Name = "createProjectButton";
             createProjectButton.Size = new Size(198, 44);
             createProjectButton.TabIndex = 1;
@@ -60,7 +60,7 @@
             // openProjectButton
             // 
             openProjectButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            openProjectButton.Location = new Point(408, 62);
+            openProjectButton.Location = new Point(494, 62);
             openProjectButton.Name = "openProjectButton";
             openProjectButton.Size = new Size(198, 44);
             openProjectButton.TabIndex = 2;
@@ -72,7 +72,7 @@
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(618, 345);
+            ClientSize = new Size(704, 441);
             Controls.Add(openProjectButton);
             Controls.Add(createProjectButton);
             Controls.Add(recentProjectList);

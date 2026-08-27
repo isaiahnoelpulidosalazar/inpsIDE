@@ -9,7 +9,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="inpsNuGet" Version="1.2.5" />
+    <None Remove="inpsGE.zip" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="inpsGE.zip" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="inpsNuGet" Version="1.2.6" />
   </ItemGroup>
 
 </Project>
