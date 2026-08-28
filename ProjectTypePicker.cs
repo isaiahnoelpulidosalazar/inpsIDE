@@ -5,11 +5,15 @@ namespace inpsIDE
 {
     public partial class ProjectTypePicker : Form
     {
+        MainCode MainCode;
+
         ClickableElement inpsGE = new ClickableElement("inpsGE");
 
-        public ProjectTypePicker()
+        public ProjectTypePicker(MainCode MainCode)
         {
             InitializeComponent();
+
+            this.MainCode = MainCode;
 
             inpsGE.SetEvent(() => { inpsGE.Toggle(); });
 
@@ -26,11 +30,19 @@ namespace inpsIDE
             {
                 if (ce.IsToggled())
                 {
+                    string ProjectName = projectNameTextBox.Text;
                     string ZipName = $"{ce.GetTitle()}.zip";
-                    string ZipPath = projectResultingDirectoryTextBox.Text;
-                    SimpleFileHandler.ProjectToLocation(Assembly.GetExecutingAssembly(), ZipName, ZipPath);
-                    SimpleFileHandler.ExtractZipSafe(ZipPath + "\\" + ZipName, ZipPath);
+                    string ZipPath = projectResultingDirectoryTextBox.Text + "\\" + ce.GetTitle();
+                    string ProjectFile = $"{projectResultingDirectoryTextBox.Text}\\{ProjectName}.inpsproj";
+                    string ProjectContent = $"inpsIDEProjectType={ce.GetTitle()}\n" +
+                        $"Title={ProjectName}\n" +
+                        $"Location={projectResultingDirectoryTextBox.Text}\n" +
+                        $"Files=\n";
+                    SimpleFileHandler.ProjectToLocationThenExtractZipThenDelete(Assembly.GetExecutingAssembly(), ZipName, ZipPath);
+                    SimpleFileHandler.Write(ProjectFile, ProjectContent);
                     Close();
+                    MainCode.Hide();
+                    new Editor(MainCode, ProjectFile).Show();
                 }
             }
         }
