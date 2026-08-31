@@ -40,7 +40,7 @@ namespace inpsIDE
 
         private void runToolStripMenuItem_Click(object sender, EventArgs e)
         {
-
+            new Actions(null).RunExe($"{Title}\\inpsGE\\inpsGE.exe", "title=Liferoad");
         }
 
         private void Editor_FormClosing(object sender, FormClosingEventArgs e)
