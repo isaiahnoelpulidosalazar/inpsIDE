@@ -34,7 +34,7 @@ namespace inpsIDE
         {
             string ProjectType = ProjectFileContent.Split('\n')[0].Split('=')[1];
             string ProjectLocation = ProjectFileContent.Split('\n')[2].Split('=')[1];
-            new Actions(null).RunExe($"{ProjectLocation}\\{ProjectType}\\{ProjectType}.exe", $"title={Title}");
+            new Actions().RunExe($"{ProjectLocation}\\{ProjectType}\\{ProjectType}.exe", $"title={Title}");
         }
 
         private void Editor_FormClosing(object sender, FormClosingEventArgs e)

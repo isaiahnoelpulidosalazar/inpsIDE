@@ -7,7 +7,10 @@ namespace inpsIDE
     {
         MainCode MainCode;
 
-        ClickableElement inpsGE = new ClickableElement("inpsGE");
+        List<ClickableElement> ProjectTypes = [
+            new ClickableElement("inpsGE"),
+            new ClickableElement("Python"),
+            ];
 
         public ProjectTypePicker(MainCode MainCode)
         {
@@ -15,13 +18,28 @@ namespace inpsIDE
 
             this.MainCode = MainCode;
 
-            inpsGE.SetEvent(() => { inpsGE.Toggle(); });
-
-            projectTypeList.AddItem(inpsGE);
+            foreach (ClickableElement ce in ProjectTypes)
+            {
+                ce.SetEvent(() => { SelectProjectType(ce); });
+                projectTypeList.AddItem(ce);
+            }
 
             projectNameTextBox.Text = "Untitled";
             projectPathTextBox.Text = Directory.GetCurrentDirectory();
             projectResultingDirectoryTextBox.Text = projectPathTextBox.Text + "\\" + projectNameTextBox.Text;
+        }
+
+        void SelectProjectType(ClickableElement ce)
+        {
+            foreach (ClickableElement c in projectTypeList.Controls)
+            {
+                if (c != ce)
+                {
+                    if (c.IsToggled()) c.Toggle();
+                }
+            }
+
+            ce.Toggle();
         }
 
         private void createButton_Click(object sender, EventArgs e)
