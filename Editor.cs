@@ -1,20 +1,11 @@
 ﻿using inpsNuGet;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 
 namespace inpsIDE
 {
     public partial class Editor : Form
     {
         MainCode MainCode;
-        string Title;
+        string ProjectFileContent, Title;
 
         public Editor(MainCode MainCode, string ProjectFile)
         {
@@ -22,7 +13,8 @@ namespace inpsIDE
 
             this.MainCode = MainCode;
             MainCode.Hide();
-            Title = SimpleFileHandler.Read(ProjectFile).Split('\n')[1].Split('=')[1];
+            ProjectFileContent = SimpleFileHandler.Read(ProjectFile);
+            Title = ProjectFileContent.Split('\n')[1].Split('=')[1];
             Text = $"inpsIDE - {Title}";
             List<string> Recents = [.. SimpleFileHandler.Read("inpsIDE_recent").Split('\n')];
             if (Recents.Contains(ProjectFile))
@@ -40,7 +32,9 @@ namespace inpsIDE
 
         private void runToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            new Actions(null).RunExe($"{Title}\\inpsGE\\inpsGE.exe", "title=Liferoad");
+            string ProjectType = ProjectFileContent.Split('\n')[0].Split('=')[1];
+            string ProjectLocation = ProjectFileContent.Split('\n')[2].Split('=')[1];
+            new Actions(null).RunExe($"{ProjectLocation}\\{ProjectType}\\{ProjectType}.exe", $"title={Title}");
         }
 
         private void Editor_FormClosing(object sender, FormClosingEventArgs e)
