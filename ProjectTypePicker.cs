@@ -56,8 +56,18 @@ namespace inpsIDE
                         $"Title={ProjectName}\n" +
                         $"Location={projectResultingDirectoryTextBox.Text}\n" +
                         $"Files=\n";
-                    SimpleFileHandler.ProjectToLocationThenExtractZipThenDelete(Assembly.GetExecutingAssembly(), ZipName, ZipPath);
-                    SimpleFileHandler.Write(ProjectFile, ProjectContent);
+
+                    if (ce.GetTitle() == "Python")
+                    {
+                        PyCS pyCS = new PyCS(false, ZipPath);
+                        SimpleFileHandler.Write(ProjectFile, ProjectContent);
+                    }
+                    else
+                    {
+                        SimpleFileHandler.ProjectToLocationThenExtractZipThenDelete(Assembly.GetExecutingAssembly(), ZipName, ZipPath);
+                        SimpleFileHandler.Write(ProjectFile, ProjectContent);
+                    }
+
                     Close();
                     MainCode.Hide();
                     new Editor(MainCode, ProjectFile).Show();
