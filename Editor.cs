@@ -5,12 +5,18 @@ namespace inpsIDE
     public partial class Editor : Form
     {
         MainCode MainCode;
-        string ProjectFileContent, ProjectType, Title, ProjectLocation;
+        string ProjectFile, ProjectFileContent, ProjectType, Title, ProjectLocation;
+        List<ToolStripMenuItem> NewFileTypes = [
+            new ToolStripMenuItem("*.cs"),
+            new ToolStripMenuItem("*.py"),
+            new ToolStripMenuItem("*.txt")
+            ];
 
         public Editor(MainCode MainCode, string ProjectFile)
         {
             InitializeComponent();
 
+            this.ProjectFile = ProjectFile;
             this.MainCode = MainCode;
             MainCode.Hide();
             ProjectFileContent = SimpleFileHandler.Read(ProjectFile);
@@ -31,6 +37,15 @@ namespace inpsIDE
             }
             SimpleFileHandler.Write("inpsIDE_recent", NewRecents.Trim());
 
+            foreach (ToolStripMenuItem ToolStripMenuItem in NewFileTypes)
+            {
+                ToolStripMenuItem.Click += (s, e) =>
+                {
+                    new NewFileDialog(this, ToolStripMenuItem.Text, ProjectFile).ShowDialog();
+                };
+                newToolStripMenuItem.DropDownItems.Add(ToolStripMenuItem);
+            }
+
             if (ProjectType == "Python")
             {
                 ToolStripMenuItem Pip = new ToolStripMenuItem("pip");
@@ -41,6 +56,23 @@ namespace inpsIDE
                 Pip.DropDownItems.Add(InstallPipPackage);
 
                 editorMenuStrip.Items.Add(Pip);
+            }
+
+            RefreshList();
+        }
+
+        public void RefreshList()
+        {
+            fileList.Nodes.Clear();
+            ProjectFileContent = SimpleFileHandler.Read(ProjectFile);
+            string[] Files = ProjectFileContent.Split(["Files="], StringSplitOptions.None)[1].Split('\n');
+            foreach (string File in Files)
+            {
+                if (!string.IsNullOrWhiteSpace(File))
+                {
+                    fileListHint.Visible = false;
+                    fileList.Nodes.Add(File);
+                }
             }
         }
 

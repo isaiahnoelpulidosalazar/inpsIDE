@@ -36,6 +36,7 @@
             fileList = new TreeView();
             codeEditorPanel = new Panel();
             codeEditor = new TextBox();
+            newToolStripMenuItem = new ToolStripMenuItem();
             editorMenuStrip.SuspendLayout();
             fileListPanel.SuspendLayout();
             codeEditorPanel.SuspendLayout();
@@ -53,6 +54,7 @@
             // 
             // fileToolStripMenuItem
             // 
+            fileToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { newToolStripMenuItem });
             fileToolStripMenuItem.Name = "fileToolStripMenuItem";
             fileToolStripMenuItem.Size = new Size(37, 20);
             fileToolStripMenuItem.Text = "File";
@@ -120,6 +122,12 @@
             codeEditor.Size = new Size(399, 259);
             codeEditor.TabIndex = 0;
             // 
+            // newToolStripMenuItem
+            // 
+            newToolStripMenuItem.Name = "newToolStripMenuItem";
+            newToolStripMenuItem.Size = new Size(180, 22);
+            newToolStripMenuItem.Text = "New";
+            // 
             // Editor
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -155,5 +163,6 @@
         private System.Windows.Forms.TextBox codeEditor;
         private ToolStripMenuItem fileToolStripMenuItem;
         private ToolStripMenuItem runToolStripMenuItem;
+        private ToolStripMenuItem newToolStripMenuItem;
     }
 }
