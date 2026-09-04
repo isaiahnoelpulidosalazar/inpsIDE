@@ -59,7 +59,7 @@ namespace inpsIDE
 
                     if (ce.GetTitle() == "Python")
                     {
-                        PyCS pyCS = new PyCS(false, ZipPath);
+                        PyCS pyCS = new PyCS(ZipPath);
                         SimpleFileHandler.Write(ProjectFile, ProjectContent);
                     }
                     else

@@ -30,13 +30,14 @@
         {
             editorMenuStrip = new MenuStrip();
             fileToolStripMenuItem = new ToolStripMenuItem();
+            newToolStripMenuItem = new ToolStripMenuItem();
+            saveToolStripMenuItem = new ToolStripMenuItem();
             runToolStripMenuItem = new ToolStripMenuItem();
             fileListPanel = new Panel();
             fileListHint = new Label();
             fileList = new TreeView();
             codeEditorPanel = new Panel();
             codeEditor = new TextBox();
-            newToolStripMenuItem = new ToolStripMenuItem();
             editorMenuStrip.SuspendLayout();
             fileListPanel.SuspendLayout();
             codeEditorPanel.SuspendLayout();
@@ -54,10 +55,23 @@
             // 
             // fileToolStripMenuItem
             // 
-            fileToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { newToolStripMenuItem });
+            fileToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { newToolStripMenuItem, saveToolStripMenuItem });
             fileToolStripMenuItem.Name = "fileToolStripMenuItem";
             fileToolStripMenuItem.Size = new Size(37, 20);
             fileToolStripMenuItem.Text = "File";
+            // 
+            // newToolStripMenuItem
+            // 
+            newToolStripMenuItem.Name = "newToolStripMenuItem";
+            newToolStripMenuItem.Size = new Size(180, 22);
+            newToolStripMenuItem.Text = "New";
+            // 
+            // saveToolStripMenuItem
+            // 
+            saveToolStripMenuItem.Name = "saveToolStripMenuItem";
+            saveToolStripMenuItem.Size = new Size(180, 22);
+            saveToolStripMenuItem.Text = "Save";
+            saveToolStripMenuItem.Click += saveToolStripMenuItem_Click;
             // 
             // runToolStripMenuItem
             // 
@@ -98,6 +112,7 @@
             fileList.Name = "fileList";
             fileList.Size = new Size(233, 259);
             fileList.TabIndex = 1;
+            fileList.NodeMouseDoubleClick += fileList_NodeMouseDoubleClick;
             // 
             // codeEditorPanel
             // 
@@ -121,12 +136,7 @@
             codeEditor.ScrollBars = ScrollBars.Both;
             codeEditor.Size = new Size(399, 259);
             codeEditor.TabIndex = 0;
-            // 
-            // newToolStripMenuItem
-            // 
-            newToolStripMenuItem.Name = "newToolStripMenuItem";
-            newToolStripMenuItem.Size = new Size(180, 22);
-            newToolStripMenuItem.Text = "New";
+            codeEditor.TextChanged += codeEditor_TextChanged;
             // 
             // Editor
             // 
@@ -164,5 +174,6 @@
         private ToolStripMenuItem fileToolStripMenuItem;
         private ToolStripMenuItem runToolStripMenuItem;
         private ToolStripMenuItem newToolStripMenuItem;
+        private ToolStripMenuItem saveToolStripMenuItem;
     }
 }

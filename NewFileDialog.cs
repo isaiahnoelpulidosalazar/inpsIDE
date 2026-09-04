@@ -1,28 +1,18 @@
 ﻿using inpsNuGet;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 
 namespace inpsIDE
 {
     public partial class NewFileDialog : Form
     {
         Editor Editor;
-        string? FileType, ProjectFile;
+        string? FileType;
 
-        public NewFileDialog(Editor Editor, string? FileType, string? ProjectFile)
+        public NewFileDialog(Editor Editor, string? FileType)
         {
             InitializeComponent();
 
             this.Editor = Editor;
             this.FileType = FileType;
-            this.ProjectFile = ProjectFile;
             Text = $"Create new {FileType} file";
         }
 
@@ -33,7 +23,8 @@ namespace inpsIDE
 
         private void createButton_Click(object sender, EventArgs e)
         {
-            SimpleFileHandler.Append(ProjectFile, $"{fileNameTextBox.Text}{FileType.Substring(1)}\n");
+            SimpleFileHandler.Append(Editor.ProjectFile, $"{fileNameTextBox.Text}{FileType?.Substring(1)}\n");
+            SimpleFileHandler.Write($"{Editor.ProjectLocation}\\{fileNameTextBox.Text}{FileType?.Substring(1)}", string.Empty);
             Editor.RefreshList();
             Close();
         }
