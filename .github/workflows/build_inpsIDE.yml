@@ -1,0 +1,95 @@
+name: Build inpsIDE
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  PROJECT: inpsIDE.csproj
+  SIGN_PFX_BASE64: ${{ secrets.SIGN_PFX_BASE64 }}
+  SIGN_PFX_PASSWORD: ${{ secrets.SIGN_PFX_PASSWORD }}
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Read version from csproj
+        id: ver
+        shell: pwsh
+        run: |
+          $v = (Select-Xml -Path $env:PROJECT -XPath '//Version' | Select-Object -First 1).Node.InnerText.Trim()
+          if (-not $v) { throw "No <Version> element found in $env:PROJECT" }
+          "version=$v" >> $env:GITHUB_OUTPUT
+          Write-Host "Version: $v"
+
+      - name: Check whether this version is already released
+        id: exists
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "v${{ steps.ver.outputs.version }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish (self-contained, single file)
+        shell: pwsh
+        run: >
+          dotnet publish $env:PROJECT -c Release -r win-x64 --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:DebugType=none
+          -o publish
+
+      - name: Sign executable (only if a certificate secret exists)
+        if: env.SIGN_PFX_BASE64 != ''
+        shell: pwsh
+        run: |
+          $pfx = Join-Path $env:RUNNER_TEMP 'sign.pfx'
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:SIGN_PFX_BASE64))
+          $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" |
+                      Sort-Object FullName -Descending | Select-Object -First 1
+          & $signtool.FullName sign /f $pfx /p $env:SIGN_PFX_PASSWORD /fd SHA256 `
+              /tr http://timestamp.digicert.com /td SHA256 /d "inpsIDE" publish\inpsIDE.exe
+          if ($LASTEXITCODE -ne 0) { throw "signtool failed" }
+          Remove-Item $pfx
+
+      - name: Prepare release files
+        shell: pwsh
+        run: |
+          $v = "${{ steps.ver.outputs.version }}"
+          New-Item -ItemType Directory -Force dist | Out-Null
+          $exe = "dist/inpsIDE-v$v-win-x64.exe"
+          Copy-Item publish/inpsIDE.exe $exe
+          $hash = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLower()
+          "$hash  $(Split-Path $exe -Leaf)" | Out-File "$exe.sha256" -Encoding ascii
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: inpsIDE-win-x64
+          path: dist/*
+
+      - name: Create GitHub release
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && steps.exists.outputs.exists != 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V="${{ steps.ver.outputs.version }}"
+          gh release create "v$V" dist/* \
+            --target "$GITHUB_SHA" \
+            --title "inpsIDE v$V" \
+            --generate-notes
