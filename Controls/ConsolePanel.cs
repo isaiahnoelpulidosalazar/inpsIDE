@@ -1,4 +1,5 @@
 using System.Text;
+using System.ComponentModel;
 
 namespace inpsIDE.Controls;
 
@@ -95,6 +96,7 @@ public sealed class ConsolePanel : UserControl
     };
 
     /// <summary>Enables the input line and the Stop / EOF buttons while a program is running.</summary>
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool ProcessRunning
     {
         get => _running;
