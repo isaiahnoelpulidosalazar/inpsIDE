@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Resources\php-8.5.12-1-Win32-vs17-x64.zip" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\*.zip" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Must be a version of inpsNuGet that contains PyCS (Python.zip + PythonFiles.zip are embedded in the package). -->
+    <PackageReference Include="inpsNuGet" Version="2.0.1" />
+  </ItemGroup>
+
+</Project>
