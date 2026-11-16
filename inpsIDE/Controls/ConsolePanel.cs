@@ -61,7 +61,7 @@ public sealed class ConsolePanel : UserControl
         buttons.Controls.AddRange([_clear, _eof, _stop]);
 
         var header = new Panel { Dock = DockStyle.Top, Height = 28, BackColor = HeaderColor };
-        header.Controls.Add(title);   // fill first, edge-docked controls after it
+        header.Controls.Add(title);
         header.Controls.Add(buttons);
 
         var prompt = new Label
@@ -136,7 +136,6 @@ public sealed class ConsolePanel : UserControl
             _pending.Clear();
         }
 
-        // TextBox wants "\r\n"; dropping every '\r' first makes chunk boundaries inside a "\r\n" harmless.
         chunk = chunk.Replace("\r", "").Replace("\n", "\r\n");
 
         if (_output.TextLength + chunk.Length > MaxChars)

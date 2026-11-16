@@ -5,14 +5,9 @@ using inpsIDE.Models;
 
 namespace inpsIDE.Services;
 
-/// <summary>
-/// Runs one child process with all three standard streams redirected.
-/// Output is delivered as raw chunks (not lines), so prompts without a trailing newline - input("Name: ") - show up immediately.
-/// Events are raised on background threads.
-/// </summary>
 public sealed class ProcessRunner : IDisposable
 {
-    static readonly UTF8Encoding Utf8NoBom = new(false); // a BOM on stdin would show up as garbage in the child's first input
+    static readonly UTF8Encoding Utf8NoBom = new(false);
 
     readonly object _gate = new();
     Process? _process;
@@ -23,15 +18,23 @@ public sealed class ProcessRunner : IDisposable
 
     public bool IsRunning
     {
-        get { lock (_gate) return _process is not null; }
+        get
+        {
+            lock (_gate)
+            {
+                return _process is not null;
+            }
+        }
     }
 
-    /// <exception cref="Win32Exception">The executable could not be started.</exception>
     public void Start(RunCommand command)
     {
         lock (_gate)
         {
-            if (_process is not null) throw new InvalidOperationException("A process is already running.");
+            if (_process is not null)
+            {
+                throw new InvalidOperationException("A process is already running.");
+            }
         }
 
         var info = new ProcessStartInfo(command.FileName)
@@ -46,9 +49,17 @@ public sealed class ProcessRunner : IDisposable
             StandardOutputEncoding = Encoding.UTF8,
             StandardErrorEncoding = Encoding.UTF8
         };
-        foreach (string argument in command.Arguments) info.ArgumentList.Add(argument);
+        foreach (string argument in command.Arguments)
+        {
+            info.ArgumentList.Add(argument);
+        }
         if (command.Environment is { } environment)
-            foreach ((string key, string value) in environment) info.Environment[key] = value;
+        {
+            foreach ((string key, string value) in environment)
+            {
+                info.Environment[key] = value;
+            }
+        }
 
         var process = new Process { StartInfo = info };
         process.Start();
@@ -68,7 +79,6 @@ public sealed class ProcessRunner : IDisposable
             try
             {
                 await process.WaitForExitAsync().ConfigureAwait(false);
-                // Let the readers drain what is left, but don't hang if a grandchild process keeps the pipes open.
                 await Task.WhenAny(Task.WhenAll(stdout, stderr), Task.Delay(2000)).ConfigureAwait(false);
                 exitCode = process.ExitCode;
             }
@@ -83,7 +93,11 @@ public sealed class ProcessRunner : IDisposable
                 }
             }
 
-            try { process.Dispose(); } catch (Exception ex) when (ex is InvalidOperationException or Win32Exception) { }
+            try
+            {
+                process.Dispose();
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or Win32Exception) { }
             Exited?.Invoke(exitCode);
         });
     }
@@ -95,34 +109,42 @@ public sealed class ProcessRunner : IDisposable
         {
             int count;
             while ((count = await reader.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false)) > 0)
+            {
                 OutputReceived?.Invoke(new string(buffer, 0, count));
+            }
         }
-        catch (Exception ex) when (ex is IOException or InvalidOperationException) { } // stream closed / process disposed
+        catch (Exception ex) when (ex is IOException or InvalidOperationException) { }
     }
 
-    /// <summary>Writes one line (terminated with "\n") to the child's standard input.</summary>
-    /// <returns>false if nothing is running or its input is closed.</returns>
     public bool SendLine(string text)
     {
         lock (_gate)
         {
-            if (_stdin is null) return false;
+            if (_stdin is null)
+            {
+                return false;
+            }
             try
             {
                 _stdin.Write(text + "\n");
                 _stdin.Flush();
                 return true;
             }
-            catch (IOException) { return false; } // the child exited or closed its stdin
+            catch (IOException)
+            {
+                return false;
+            }
         }
     }
 
-    /// <summary>Closes the child's standard input (like Ctrl+D / Ctrl+Z): programs that read until EOF then continue.</summary>
     public void CloseInput()
     {
         lock (_gate)
         {
-            try { _stdin?.Close(); }
+            try
+            {
+                _stdin?.Close();
+            }
             catch (IOException) { }
             _stdin = null;
         }
@@ -135,10 +157,13 @@ public sealed class ProcessRunner : IDisposable
 
         try
         {
-            if (process is { HasExited: false }) process.Kill(entireProcessTree: true);
+            if (process is { HasExited: false })
+            {
+                process.Kill(entireProcessTree: true);
+            }
         }
         catch (Exception ex) when (ex is InvalidOperationException or Win32Exception or NotSupportedException) { }
     }
 
-    public void Dispose() => Stop(); // the background task disposes the Process once it has exited
+    public void Dispose() => Stop();
 }

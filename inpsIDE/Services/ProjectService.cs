@@ -12,24 +12,30 @@ public static class ProjectService
 
     static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
-    /// <summary>Validates a project name; returns an error message or null if valid.</summary>
     public static string? ValidateName(string name)
     {
-        if (string.IsNullOrWhiteSpace(name)) return "Please enter a project name.";
-        if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) return "The project name contains characters that are not allowed in a folder name.";
-        if (name.EndsWith('.') || name.EndsWith(' ')) return "The project name cannot end with a dot or a space.";
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return "Please enter a project name.";
+        }
+        if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        {
+            return "The project name contains characters that are not allowed in a folder name.";
+        }
+        if (name.EndsWith('.') || name.EndsWith(' '))
+        {
+            return "The project name cannot end with a dot or a space.";
+        }
         return null;
     }
 
-    /// <summary>
-    /// Creates the project on disk (may take a while: runtime extraction, pip install...) - call from a background thread.
-    /// Problems that don't prevent using the project end up in <see cref="IdeProject.SetupWarning"/>.
-    /// </summary>
     public static IdeProject Create(ProjectTemplate template, string name, string location)
     {
         string root = Path.GetFullPath(Path.Combine(location, name));
         if (Directory.Exists(root) && Directory.EnumerateFileSystemEntries(root).Any())
+        {
             throw new IOException($"The folder '{root}' already exists and is not empty.");
+        }
 
         Directory.CreateDirectory(root);
 
@@ -41,18 +47,26 @@ public static class ProjectService
         }
 
         LanguageSupport? language = template.Language;
-        var project = new IdeProject { Name = name, RootPath = root, TemplateId = template.Id, Language = language };
+        var project = new IdeProject
+        {
+            Name = name,
+            RootPath = root,
+            TemplateId = template.Id,
+            Language = language
+        };
         project.SetupWarning = language?.InstallRuntime(root, template);
 
         Save(project);
         return project;
     }
 
-    /// <summary>Opens any folder as a project. Reads project.inpsproj if present (nothing is written).</summary>
     public static IdeProject Open(string folder)
     {
         string root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(folder));
-        if (!Directory.Exists(root)) throw new DirectoryNotFoundException($"The folder '{root}' does not exist.");
+        if (!Directory.Exists(root))
+        {
+            throw new DirectoryNotFoundException($"The folder '{root}' does not exist.");
+        }
 
         string name = new DirectoryInfo(root).Name;
         string templateId = TemplateCatalog.EmptyId;
@@ -69,22 +83,25 @@ public static class ProjectService
                     templateId = pf.Template ?? TemplateCatalog.EmptyId;
                 }
             }
-            catch (JsonException) { /* corrupt project file: fall back to folder name */ }
+            catch (JsonException) { }
         }
 
-        // Known template -> its language. Unknown / empty template -> whichever runtime folder is present.
         LanguageSupport? language = TemplateCatalog.Find(templateId)?.Language ?? LanguageRegistry.Detect(root);
 
-        return new IdeProject { Name = name, RootPath = root, TemplateId = templateId, Language = language };
+        return new IdeProject
+        {
+            Name = name,
+            RootPath = root,
+            TemplateId = templateId,
+            Language = language
+        };
     }
 
     static string Expand(string content, string name) => content
         .Replace("$PROJECT_NAME_TEXT$", EscapeForSource(name))
         .Replace("$PROJECT_NAME$", WebUtility.HtmlEncode(name));
 
-    /// <summary>Safe inside single or double quoted strings of PHP, Python and most other languages.</summary>
-    static string EscapeForSource(string text) =>
-        text.Replace("\\", "\\\\").Replace("'", "\\'").Replace("\"", "\\\"");
+    static string EscapeForSource(string text) => text.Replace("\\", "\\\\").Replace("'", "\\'").Replace("\"", "\\\"");
 
     static void Save(IdeProject project)
     {

@@ -7,6 +7,8 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <Version>1.0.0</Version>
+    <RuntimeIdentifiers>win-x86;win-x64</RuntimeIdentifiers>
+    <Platforms>x86;x64</Platforms>
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,7 +20,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Must be a version of inpsNuGet that contains PyCS (Python.zip + PythonFiles.zip are embedded in the package). -->
     <PackageReference Include="inpsNuGet" Version="2.0.1" />
   </ItemGroup>
 

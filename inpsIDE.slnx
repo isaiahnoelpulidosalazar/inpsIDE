@@ -1,3 +1,17 @@
 <Solution>
-  <Project Path="inpsIDE.csproj" />
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="ARM" />
+    <Platform Name="ARM64" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="inpsIDE.Packaging/inpsIDE.Packaging.wapproj" Type="c7167f0d-bc9f-4e6e-afe1-012c56b48db5" Id="b384d17d-43cc-4c3f-a118-fd0b77f148d5">
+    <Platform Solution="Debug|Any CPU" Project="x64" />
+    <Deploy />
+  </Project>
+  <Project Path="inpsIDE\inpsIDE.csproj">
+    <Platform Solution="*|x64" Project="x64" />
+    <Platform Solution="Debug|Any CPU" Project="x64" />
+  </Project>
 </Solution>

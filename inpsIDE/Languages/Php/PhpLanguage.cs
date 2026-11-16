@@ -94,12 +94,17 @@ public sealed class PhpLanguage : LanguageSupport
 
     public static string? FindPhpExecutable(string runtimeDirectory)
     {
-        if (!Directory.Exists(runtimeDirectory)) return null;
+        if (!Directory.Exists(runtimeDirectory))
+        {
+            return null;
+        }
 
         string direct = Path.Combine(runtimeDirectory, "php.exe");
-        if (File.Exists(direct)) return direct;
+        if (File.Exists(direct))
+        {
+            return direct;
+        }
 
-        // Some zips wrap everything in a top-level folder.
         var options = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true };
         return Directory.EnumerateFiles(runtimeDirectory, "php.exe", options).FirstOrDefault();
     }
@@ -114,12 +119,8 @@ public sealed class PhpLanguage : LanguageSupport
         $"No php.exe was found in:\n{GetRuntimePath(projectRoot)}\n\n" +
         "Create the project from a PHP template (with the PHP zip embedded) or copy a PHP build into that folder.";
 
-    public override RunCommand CreateRunFileCommand(string executable, string projectRoot, string filePath) =>
-        new(executable, ["-f", filePath], projectRoot, $"php -f \"{filePath}\"");
-
-    // Opened folders (no template) may be websites too, so only console projects are excluded.
+    public override RunCommand CreateRunFileCommand(string executable, string projectRoot, string filePath) => new(executable, ["-f", filePath], projectRoot, $"php -f \"{filePath}\"");
     public override bool SupportsServer(ProjectTemplate? template) => template is not { Kind: ProjectKind.Console };
-
     public override RunCommand? CreateServerCommand(string executable, string projectRoot, ProjectTemplate? template)
     {
         string pub = Path.Combine(projectRoot, "public");

@@ -5,13 +5,10 @@ using inpsNuGet;
 
 namespace inpsIDE.Languages.Python;
 
-/// <summary>Python 3.13 through inpsNuGet's <see cref="PyCS"/> (extracted into "&lt;project&gt;\Python").</summary>
 public sealed class PythonLanguage : LanguageSupport
 {
     public const string LanguageId = "python";
     const string ServerUrl = "http://127.0.0.1:8000/";
-
-    // Unbuffered + UTF-8, so prompts like input("Name: ") show up immediately and non-ASCII text survives the pipes.
     static readonly IReadOnlyDictionary<string, string> PythonEnvironment = new Dictionary<string, string>
     {
         ["PYTHONUNBUFFERED"] = "1",
@@ -21,14 +18,14 @@ public sealed class PythonLanguage : LanguageSupport
     static readonly Regex Tokens = new(
         @"(?<comment>#[^\r\n]*)" +
         @"|(?<string>""""""[\s\S]*?""""""|'''[\s\S]*?'''|""(?:\\.|[^""\\\r\n])*""|'(?:\\.|[^'\\\r\n])*')" +
-        @"|(?<tag>@[A-Za-z_][\w.]*)" + // decorators
+        @"|(?<tag>@[A-Za-z_][\w.]*)" +
         @"|(?<keyword>\b(?:False|None|True|and|as|assert|async|await|break|class|continue|def|del|elif|else|except|finally|for|from|global|if|import|in|is|lambda|nonlocal|not|or|pass|raise|return|self|try|while|with|yield)\b)" +
         @"|(?<number>\b\d+(?:\.\d+)?\b)",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     public override string Id => LanguageId;
     public override string DisplayName => "Python";
-    public override string RuntimeFolderName => "Python"; // PyCS extracts to "<directory>/Python"
+    public override string RuntimeFolderName => "Python";
     public override IReadOnlyList<string> FileExtensions { get; } = [".py", ".pyw"];
     public override IReadOnlyList<string> InitialFileCandidates { get; } = ["main.py", "app.py"];
     public override Regex? TokenPattern => Tokens;
@@ -93,15 +90,20 @@ public sealed class PythonLanguage : LanguageSupport
     {
         try
         {
-            var py = new PyCS(projectRoot); // -> <projectRoot>\Python
+            var py = new PyCS(projectRoot);
             py.Initialize();
             AddProjectRootToSearchPath(GetRuntimePath(projectRoot));
 
-            if (template.Packages is not { Count: > 0 } packages) return null;
+            if (template.Packages is not { Count: > 0 } packages)
+            {
+                return null;
+            }
 
             var pip = py.InstallPip();
             if (pip is not null && pip.ExitCode != 0)
+            {
                 return "Python was installed, but pip could not be installed (is there an internet connection?):\n\n" + pip.Combined;
+            }
 
             var result = py.Pip(packages.ToArray());
             return result.ExitCode == 0
@@ -114,34 +116,41 @@ public sealed class PythonLanguage : LanguageSupport
         }
     }
 
-    /// <summary>
-    /// The embedded Python runs with a python313._pth file, which disables the "script folder on sys.path" behaviour.
-    /// Adding ".." (the project folder, relative to the _pth file) lets scripts import their sibling modules.
-    /// </summary>
     static void AddProjectRootToSearchPath(string pythonDirectory)
     {
         string pth = Path.Combine(pythonDirectory, "python313._pth");
-        if (!File.Exists(pth)) return;
+        if (!File.Exists(pth))
+        {
+            return;
+        }
 
         List<string> lines = File.ReadAllLines(pth).ToList();
-        if (lines.Any(l => l.Trim() == "..")) return;
+        if (lines.Any(l => l.Trim() == ".."))
+        {
+            return;
+        }
 
         int dot = lines.FindIndex(l => l.Trim() == ".");
         lines.Insert(dot >= 0 ? dot + 1 : lines.Count, "..");
         File.WriteAllLines(pth, lines, new UTF8Encoding(false));
     }
 
-    public override RunCommand CreateRunFileCommand(string executable, string projectRoot, string filePath) =>
-        new(executable, [filePath], projectRoot, $"python \"{filePath}\"", PythonEnvironment);
+    public override RunCommand CreateRunFileCommand(string executable, string projectRoot, string filePath) => new(executable, [filePath], projectRoot, $"python \"{filePath}\"", PythonEnvironment);
 
     public override bool SupportsServer(ProjectTemplate? template) => template is { Kind: ProjectKind.Web, EntryFile: not null };
 
     public override RunCommand? CreateServerCommand(string executable, string projectRoot, ProjectTemplate? template)
     {
-        if (template is not { Kind: ProjectKind.Web, EntryFile: { } entry }) return null;
+        if (template is not { Kind: ProjectKind.Web, EntryFile: { } entry })
+        {
+            return null;
+        }
 
         string script = Path.Combine(projectRoot, entry);
-        if (!File.Exists(script)) return null;
+        if (!File.Exists(script))
+        {
+            return null;
+        }
 
         return new RunCommand(
             executable,
@@ -150,6 +159,6 @@ public sealed class PythonLanguage : LanguageSupport
             $"python \"{script}\"",
             PythonEnvironment,
             Url: ServerUrl,
-            OpenBrowserDelayMs: 1500); // Flask needs a moment before it accepts connections
+            OpenBrowserDelayMs: 1500);
     }
 }

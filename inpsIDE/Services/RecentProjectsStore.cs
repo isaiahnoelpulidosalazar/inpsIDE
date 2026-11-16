@@ -4,21 +4,21 @@ using inpsIDE.Models;
 
 namespace inpsIDE.Services;
 
-/// <summary>Persists the recent project list in %AppData%\inpsIDE\recent.json.</summary>
 public static class RecentProjectsStore
 {
     const int MaxItems = 15;
 
-    static readonly string StorePath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "inpsIDE", "recent.json");
-
+    static readonly string StorePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "inpsIDE", "recent.json");
     static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
     public static List<RecentProject> Load()
     {
         try
         {
-            if (!File.Exists(StorePath)) return [];
+            if (!File.Exists(StorePath))
+            {
+                return [];
+            }
             return JsonSerializer.Deserialize<List<RecentProject>>(SimpleFileHandler.Read(StorePath)) ?? [];
         }
         catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
@@ -32,7 +32,10 @@ public static class RecentProjectsStore
         List<RecentProject> items = Load();
         items.RemoveAll(r => r.Path.Equals(project.RootPath, StringComparison.OrdinalIgnoreCase));
         items.Insert(0, new RecentProject(project.Name, project.RootPath, DateTime.UtcNow));
-        if (items.Count > MaxItems) items.RemoveRange(MaxItems, items.Count - MaxItems);
+        if (items.Count > MaxItems)
+        {
+            items.RemoveRange(MaxItems, items.Count - MaxItems);
+        }
         Save(items);
     }
 
@@ -40,7 +43,9 @@ public static class RecentProjectsStore
     {
         List<RecentProject> items = Load();
         if (items.RemoveAll(r => r.Path.Equals(path, StringComparison.OrdinalIgnoreCase)) > 0)
+        {
             Save(items);
+        }
     }
 
     static void Save(List<RecentProject> items)
@@ -50,9 +55,6 @@ public static class RecentProjectsStore
             Directory.CreateDirectory(Path.GetDirectoryName(StorePath)!);
             SimpleFileHandler.Write(StorePath, JsonSerializer.Serialize(items, JsonOptions));
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            // The recent list is a convenience; never fail the user's action because of it.
-        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
     }
 }

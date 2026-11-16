@@ -5,10 +5,6 @@ using inpsIDE.Languages;
 
 namespace inpsIDE.Controls;
 
-/// <summary>
-/// A small code editor: RichTextBox + line-number gutter + debounced syntax highlighting.
-/// Highlighting and auto-indent rules come from the file's <see cref="LanguageSupport"/>; light theme.
-/// </summary>
 public sealed class CodeEditor : UserControl
 {
     const int WM_SETREDRAW = 0x000B;
@@ -172,14 +168,13 @@ public sealed class CodeEditor : UserControl
                 e.SuppressKeyPress = true;
                 break;
 
-            // Paste as plain text so no foreign formatting sneaks into the editor.
             case Keys.Control | Keys.V:
             case Keys.Shift | Keys.Insert:
                 try
                 {
                     if (Clipboard.ContainsText()) _text.SelectedText = Clipboard.GetText();
                 }
-                catch (ExternalException) { /* clipboard busy */ }
+                catch (ExternalException) { }
                 e.SuppressKeyPress = true;
                 break;
         }
@@ -230,7 +225,6 @@ public sealed class CodeEditor : UserControl
         }
     }
 
-    // Languages only need to provide the groups they use; a missing group simply never matches.
     static Color ColorFor(Match m) =>
         m.Groups["comment"].Success ? CommentColor :
         m.Groups["string"].Success ? StringColor :
@@ -239,7 +233,6 @@ public sealed class CodeEditor : UserControl
         m.Groups["keyword"].Success ? KeywordColor :
         NumberColor;
 
-    /// <summary>Paints line numbers next to the text box.</summary>
     sealed class LineNumberGutter : Control
     {
         readonly RichTextBox _box;
