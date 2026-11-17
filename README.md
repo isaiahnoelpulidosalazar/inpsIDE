@@ -20,7 +20,7 @@ language runtime, so there is nothing else to install.
 
 inpsIDE is available from the Microsoft Store:
 
-**[Get inpsIDE from the Microsoft Store](https://apps.microsoft.com/detail/YOUR-STORE-ID)**
+**[Get inpsIDE from the Microsoft Store](https://apps.microsoft.com/detail/9nlzfwgck2m6)**
 
 Updates are delivered through the Store.
 
