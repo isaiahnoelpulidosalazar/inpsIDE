@@ -75,13 +75,23 @@ public sealed class CodeEditor : UserControl
         _text.KeyDown += OnKeyDown;
         _text.SelectionChanged += (_, _) =>
         {
-            if (!_highlighting) CaretMoved?.Invoke(this, EventArgs.Empty);
+            if (!_highlighting)
+            {
+                CaretMoved?.Invoke(this, EventArgs.Empty);
+            }
         };
 
         _highlightTimer.Tick += (_, _) =>
         {
             _highlightTimer.Stop();
-            if (Visible) Highlight(); else _pendingHighlight = true;
+            if (Visible)
+            {
+                Highlight();
+            }
+            else
+            {
+                _pendingHighlight = true;
+            }
         };
     }
 
@@ -102,7 +112,10 @@ public sealed class CodeEditor : UserControl
             _text.Text = content;
             _text.ClearUndo();
         }
-        finally { _loading = false; }
+        finally
+        {
+            _loading = false;
+        }
 
         _gutter.UpdateWidth();
         SetDirty(false);
@@ -112,7 +125,10 @@ public sealed class CodeEditor : UserControl
     public void SaveFile(string path)
     {
         string text = _text.Text.Replace("\r\n", "\n");
-        if (_usesCrlf) text = text.Replace("\n", "\r\n");
+        if (_usesCrlf)
+        {
+            text = text.Replace("\n", "\r\n");
+        }
         SimpleFileHandler.Write(path, text);
         SetDirty(false);
     }
@@ -129,13 +145,20 @@ public sealed class CodeEditor : UserControl
 
     protected override void Dispose(bool disposing)
     {
-        if (disposing) _highlightTimer.Dispose();
+        if (disposing)
+        {
+            _highlightTimer.Dispose();
+        }
         base.Dispose(disposing);
     }
 
     void SetDirty(bool dirty)
     {
-        if (IsDirty == dirty) return;
+        if (IsDirty == dirty)
+        {
+            return;
+        }
+
         IsDirty = dirty;
         DirtyChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -144,7 +167,10 @@ public sealed class CodeEditor : UserControl
     {
         _gutter.UpdateWidth();
         _gutter.Invalidate();
-        if (_loading || _highlighting) return;
+        if (_loading || _highlighting)
+        {
+            return;
+        }
 
         SetDirty(true);
         if (_tokens is not null)
@@ -172,7 +198,10 @@ public sealed class CodeEditor : UserControl
             case Keys.Shift | Keys.Insert:
                 try
                 {
-                    if (Clipboard.ContainsText()) _text.SelectedText = Clipboard.GetText();
+                    if (Clipboard.ContainsText())
+                    {
+                        _text.SelectedText = Clipboard.GetText();
+                    }
                 }
                 catch (ExternalException) { }
                 e.SuppressKeyPress = true;
@@ -188,7 +217,10 @@ public sealed class CodeEditor : UserControl
 
         string indent = new(before.TakeWhile(c => c == ' ' || c == '\t').ToArray());
         string trimmed = before.TrimEnd();
-        if (trimmed.Length > 0 && _indentTriggers.Contains(trimmed[^1])) indent += "    ";
+        if (trimmed.Length > 0 && _indentTriggers.Contains(trimmed[^1]))
+        {
+            indent += "    ";
+        }
 
         _text.SelectedText = "\n" + indent;
     }
@@ -196,7 +228,10 @@ public sealed class CodeEditor : UserControl
     void Highlight()
     {
         Regex? tokens = _tokens;
-        if (tokens is null || _text.TextLength == 0 || _text.TextLength > MaxHighlightLength) return;
+        if (tokens is null || _text.TextLength == 0 || _text.TextLength > MaxHighlightLength)
+        {
+            return;
+        }
 
         _highlighting = true;
         var scroll = new Point();
@@ -253,7 +288,10 @@ public sealed class CodeEditor : UserControl
             int lines = _box.GetLineFromCharIndex(_box.TextLength) + 1;
             int digits = Math.Max(3, lines.ToString().Length);
             int width = TextRenderer.MeasureText(new string('9', digits), Font).Width + 14;
-            if (Width != width) Width = width;
+            if (Width != width)
+            {
+                Width = width;
+            }
         }
 
         protected override void OnPaint(PaintEventArgs e)
@@ -266,7 +304,10 @@ public sealed class CodeEditor : UserControl
             for (int line = first; line < total; line++)
             {
                 Point p = _box.GetPositionFromCharIndex(_box.GetFirstCharIndexFromLine(line));
-                if (p.Y > Height) break;
+                if (p.Y > Height)
+                {
+                    break;
+                }
 
                 TextRenderer.DrawText(
                     e.Graphics, (line + 1).ToString(), Font,

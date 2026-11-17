@@ -153,7 +153,10 @@ public sealed class ProcessRunner : IDisposable
     public void Stop()
     {
         Process? process;
-        lock (_gate) process = _process;
+        lock (_gate)
+        {
+            process = _process;
+        }
 
         try
         {

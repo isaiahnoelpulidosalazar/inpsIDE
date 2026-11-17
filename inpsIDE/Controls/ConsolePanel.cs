@@ -3,12 +3,6 @@ using System.ComponentModel;
 
 namespace inpsIDE.Controls;
 
-/// <summary>
-/// The IDE's console: light themed output on top, an input line at the bottom.
-/// Lines typed into the input line are raised through <see cref="InputSubmitted"/> (the owner forwards them to the
-/// running program's stdin). <see cref="Write"/> is thread safe; text is shown by a UI timer so that programs that
-/// print a lot don't flood the message queue.
-/// </summary>
 public sealed class ConsolePanel : UserControl
 {
     const int MaxChars = 2_000_000, KeepChars = 1_000_000;
@@ -48,9 +42,7 @@ public sealed class ConsolePanel : UserControl
     int _historyIndex;
     bool _running;
 
-    /// <summary>The user pressed Enter in the input line.</summary>
     public event Action<string>? InputSubmitted;
-    /// <summary>"Send EOF" button or Ctrl+D.</summary>
     public event Action? EndOfInputRequested;
     public event Action? StopRequested;
 
@@ -95,34 +87,49 @@ public sealed class ConsolePanel : UserControl
         UseVisualStyleBackColor = true
     };
 
-    /// <summary>Enables the input line and the Stop / EOF buttons while a program is running.</summary>
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool ProcessRunning
     {
         get => _running;
         set
         {
-            if (_running == value) return;
+            if (_running == value)
+            {
+                return;
+            }
+
             _running = value;
             _input.Enabled = _eof.Enabled = _stop.Enabled = value;
-            if (value) _input.Focus();
+            if (value)
+            {
+                _input.Focus();
+            }
         }
     }
 
     public bool InputFocused => _input.Focused;
 
-    /// <summary>Thread safe. Text may arrive in arbitrary chunks; "\r\n" and "\n" are both treated as a line break.</summary>
     public void Write(string text)
     {
-        if (text.Length == 0) return;
-        lock (_pending) _pending.Append(text);
+        if (text.Length == 0)
+        {
+            return;
+        }
+
+        lock (_pending)
+        {
+            _pending.Append(text);
+        }
     }
 
     public void WriteLine(string text) => Write(text + "\n");
 
     public void Clear()
     {
-        lock (_pending) _pending.Clear();
+        lock (_pending)
+        {
+            _pending.Clear();
+        }
         _output.Clear();
     }
 
@@ -131,7 +138,11 @@ public sealed class ConsolePanel : UserControl
         string chunk;
         lock (_pending)
         {
-            if (_pending.Length == 0) return;
+            if (_pending.Length == 0)
+            {
+                return;
+            }
+
             chunk = _pending.ToString();
             _pending.Clear();
         }
@@ -139,7 +150,9 @@ public sealed class ConsolePanel : UserControl
         chunk = chunk.Replace("\r", "").Replace("\n", "\r\n");
 
         if (_output.TextLength + chunk.Length > MaxChars)
+        {
             _output.Text = _output.Text[^Math.Min(KeepChars, _output.TextLength)..];
+        }
 
         _output.AppendText(chunk);
         _output.SelectionStart = _output.TextLength;
@@ -153,7 +166,10 @@ public sealed class ConsolePanel : UserControl
             case Keys.Enter:
                 string line = _input.Text;
                 _input.Clear();
-                if (line.Length > 0 && (_history.Count == 0 || _history[^1] != line)) _history.Add(line);
+                if (line.Length > 0 && (_history.Count == 0 || _history[^1] != line))
+                {
+                    _history.Add(line);
+                }
                 _historyIndex = _history.Count;
                 InputSubmitted?.Invoke(line);
                 e.SuppressKeyPress = true;
@@ -186,7 +202,10 @@ public sealed class ConsolePanel : UserControl
 
     protected override void Dispose(bool disposing)
     {
-        if (disposing) _flushTimer.Dispose();
+        if (disposing)
+        {
+            _flushTimer.Dispose();
+        }
         base.Dispose(disposing);
     }
 }

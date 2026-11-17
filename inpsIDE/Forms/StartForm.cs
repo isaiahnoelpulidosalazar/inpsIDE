@@ -5,7 +5,6 @@ using inpsIDE.Services;
 
 namespace inpsIDE.Forms;
 
-/// <summary>Startup screen: recent projects (with the two action buttons) on the left. Hides while a project is open.</summary>
 public sealed class StartForm : Form
 {
     readonly VerticalList _recent = new() { Dock = DockStyle.Fill };
@@ -28,7 +27,6 @@ public sealed class StartForm : Form
 
     void BuildUi()
     {
-        // ---- left: recent projects + buttons ----
         var header = new Label { Text = "Recent projects", AutoSize = true, Font = new Font("Segoe UI Semibold", 13f), Margin = new Padding(3, 3, 3, 8) };
         var createButton = new Button { Text = "Create new project", Dock = DockStyle.Fill, Height = 42, Margin = new Padding(3, 8, 3, 3) };
         var openButton = new Button { Text = "Open existing project", Dock = DockStyle.Fill, Height = 42 };
@@ -47,12 +45,10 @@ public sealed class StartForm : Form
         _left.Controls.Add(createButton, 0, 3);
         _left.Controls.Add(openButton, 0, 4);
 
-        // ---- right: welcome ----
         var title = new Label { Text = "inpsIDE", AutoSize = true, Font = new Font("Segoe UI Semibold", 32f) };
         var subtitle = new Label
         {
-            //Text = $"A lightweight IDE for {LanguageRegistry.DescribeAll()}, written in C# and Windows Forms on .NET 10.",
-            Text = $"The official IDE made by inpsStudio, written in C# and Windows Forms on .NET 10.",
+            Text = "The official IDE made by inpsStudio, written in C# and Windows Forms on .NET 10.",
             AutoSize = true, MaximumSize = new Size(520, 0), Font = new Font("Segoe UI", 11f), Margin = new Padding(6, 6, 3, 3)
         };
         var hint = new Label
@@ -73,7 +69,6 @@ public sealed class StartForm : Form
         right.Controls.Add(hint, 0, 2);
         right.Controls.Add(_status, 0, 4);
 
-        // ---- root ----
         var root = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1 };
         root.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 380));
         root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
@@ -86,7 +81,10 @@ public sealed class StartForm : Form
     public void RefreshRecents()
     {
         _recent.SuspendLayout();
-        foreach (Control c in _recent.Controls.Cast<Control>().ToList()) c.Dispose();
+        foreach (Control c in _recent.Controls.Cast<Control>().ToList())
+        {
+            c.Dispose();
+        }
 
         List<RecentProject> items = RecentProjectsStore.Load();
         _emptyLabel.Visible = items.Count == 0;
@@ -96,19 +94,23 @@ public sealed class StartForm : Form
             var element = new ClickableElement($"{project.Name}   -   {project.Path}");
             element.SetEvent(() => OpenRecent(project));
             foreach (Control c in element.Controls.Cast<Control>().Append(element))
+            {
                 _tip.SetToolTip(c, project.Path);
+            }
             _recent.AddItem(element);
         }
 
         _recent.ResumeLayout(true);
-        _recent.AutoScrollPosition = Point.Empty; // VerticalList scrolls to the bottom on add; show the newest first
+        _recent.AutoScrollPosition = Point.Empty;
     }
 
-    /// <summary>Called by <see cref="MainForm"/> when the project is closed.</summary>
     public void ShowAgain()
     {
         RefreshRecents();
-        if (WindowState == FormWindowState.Minimized) WindowState = FormWindowState.Normal;
+        if (WindowState == FormWindowState.Minimized)
+        {
+            WindowState = FormWindowState.Normal;
+        }
         Show();
         Activate();
     }
@@ -123,7 +125,7 @@ public sealed class StartForm : Form
             if (answer == DialogResult.Yes)
             {
                 RecentProjectsStore.Remove(project.Path);
-                BeginInvoke(RefreshRecents); // don't dispose the clicked item inside its own click handler
+                BeginInvoke(RefreshRecents);
             }
             return;
         }
@@ -134,7 +136,10 @@ public sealed class StartForm : Form
     void OpenExistingProject()
     {
         using var dialog = new FolderBrowserDialog { Description = "Select a project folder", UseDescriptionForTitle = true };
-        if (dialog.ShowDialog(this) == DialogResult.OK) TryOpen(dialog.SelectedPath);
+        if (dialog.ShowDialog(this) == DialogResult.OK)
+        {
+            TryOpen(dialog.SelectedPath);
+        }
     }
 
     void TryOpen(string folder)
@@ -152,7 +157,10 @@ public sealed class StartForm : Form
     async Task CreateProjectAsync()
     {
         using var picker = new ProjectTypeForm();
-        if (picker.ShowDialog(this) != DialogResult.OK || picker.SelectedTemplate is not { } template) return;
+        if (picker.ShowDialog(this) != DialogResult.OK || picker.SelectedTemplate is not { } template)
+        {
+            return;
+        }
 
         string name = picker.ProjectName, location = picker.ProjectLocation;
         LanguageSupport? language = template.Language;
@@ -162,7 +170,9 @@ public sealed class StartForm : Form
             IdeProject project = await Task.Run(() => ProjectService.Create(template, name, location));
 
             if (project.SetupWarning is { } warning)
+            {
                 MessageBox.Show(this, warning, "Project created with problems", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
 
             OpenProject(project);
         }
@@ -186,7 +196,7 @@ public sealed class StartForm : Form
     void OpenProject(IdeProject project)
     {
         RecentProjectsStore.Add(project);
-        var main = new MainForm(project, this); // build first: if the constructor throws, this form stays visible
+        var main = new MainForm(project, this);
         Hide();
         main.Show();
     }

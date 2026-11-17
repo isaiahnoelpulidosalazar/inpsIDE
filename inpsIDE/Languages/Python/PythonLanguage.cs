@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 using inpsIDE.Models;
+using inpsIDE.Services;
 using inpsNuGet;
 
 namespace inpsIDE.Languages.Python;
@@ -30,6 +31,7 @@ public sealed class PythonLanguage : LanguageSupport
     public override IReadOnlyList<string> InitialFileCandidates { get; } = ["main.py", "app.py"];
     public override Regex? TokenPattern => Tokens;
     public override string IndentTriggers => ":";
+    public override string? PackageManagerName => "pip";
 
     public override IReadOnlyList<ProjectTemplate> Templates { get; } =
     [
@@ -115,6 +117,30 @@ public sealed class PythonLanguage : LanguageSupport
             return "The Python runtime could not be set up:\n\n" + ex.Message;
         }
     }
+
+    public override string? PreparePackageManager(string executable, string projectRoot)
+    {
+        string pipFolder = Path.Combine(GetRuntimePath(projectRoot), "Lib", "site-packages", "pip");
+        if (Directory.Exists(pipFolder))
+        {
+            return null;
+        }
+
+        try
+        {
+            var pip = new PyCS(projectRoot).InstallPip();
+            return pip is not null && pip.ExitCode != 0
+                ? "pip could not be installed (is there an internet connection?):\n\n" + pip.Combined
+                : null;
+        }
+        catch (Exception ex)
+        {
+            return "pip could not be set up:\n\n" + ex.Message;
+        }
+    }
+
+    public override RunCommand? CreatePackageCommand(string executable, string projectRoot, IReadOnlyList<string> arguments) =>
+        new(executable, ["-m", "pip", .. arguments], projectRoot, "pip " + ArgumentParser.Join(arguments), PythonEnvironment);
 
     static void AddProjectRootToSearchPath(string pythonDirectory)
     {

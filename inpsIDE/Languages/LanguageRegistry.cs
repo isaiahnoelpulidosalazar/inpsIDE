@@ -1,3 +1,4 @@
+using inpsIDE.Languages.Node;
 using inpsIDE.Languages.Php;
 using inpsIDE.Languages.Python;
 
@@ -8,7 +9,8 @@ public static class LanguageRegistry
     public static IReadOnlyList<LanguageSupport> All { get; } =
     [
         new PhpLanguage(),
-        new PythonLanguage()
+        new PythonLanguage(),
+        new NodeLanguage()
     ];
     public static LanguageSupport? Find(string? id) => id is null ? null : All.FirstOrDefault(l => string.Equals(l.Id, id, StringComparison.OrdinalIgnoreCase));
     public static LanguageSupport? ForFile(string path) => All.FirstOrDefault(l => l.Handles(path));

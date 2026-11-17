@@ -3,15 +3,6 @@ using inpsIDE.Models;
 
 namespace inpsIDE.Languages;
 
-/*
- * HOW TO ADD A LANGUAGE
- * 1. Create Languages\<Name>\<Name>Language.cs deriving from this class.
- * 2. Declare its templates (see Templates in other languages to know more), how to find/install its runtime,
- *    and how to build the command lines for "run file" (and optionally "web server").
- * 3. Optionally provide a TokenPattern for syntax highlighting.
- * 4. Add one instance to LanguageRegistry.All.
- * Nothing else (forms, editor, runner) needs to change.
- */
 public abstract class LanguageSupport
 {
     public abstract string Id { get; }
@@ -33,4 +24,7 @@ public abstract class LanguageSupport
     public abstract RunCommand CreateRunFileCommand(string executable, string projectRoot, string filePath);
     public virtual bool SupportsServer(ProjectTemplate? template) => false;
     public virtual RunCommand? CreateServerCommand(string executable, string projectRoot, ProjectTemplate? template) => null;
+    public virtual string? PackageManagerName => null;
+    public virtual string? PreparePackageManager(string executable, string projectRoot) => null;
+    public virtual RunCommand? CreatePackageCommand(string executable, string projectRoot, IReadOnlyList<string> arguments) => null;
 }

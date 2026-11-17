@@ -1,6 +1,5 @@
 namespace inpsIDE.Forms;
 
-/// <summary>Minimal "enter a single line of text" dialog.</summary>
 public sealed class PromptForm : Form
 {
     readonly TextBox _input = new() { Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
@@ -25,10 +24,13 @@ public sealed class PromptForm : Form
         Controls.AddRange(new Control[] { label, _input, ok, cancel });
         AcceptButton = ok;
         CancelButton = cancel;
-        Shown += (_, _) => { _input.Focus(); _input.SelectAll(); };
+        Shown += (_, _) =>
+        {
+            _input.Focus();
+            _input.SelectAll();
+        };
     }
 
-    /// <returns>The trimmed text, or null if the dialog was cancelled.</returns>
     public static string? Ask(IWin32Window owner, string title, string prompt, string initial = "")
     {
         using var form = new PromptForm(title, prompt, initial);

@@ -8,7 +8,6 @@ using inpsIDE.Services;
 
 namespace inpsIDE.Forms;
 
-/// <summary>The IDE window: project tree on the left, tabbed code editors on the right, interactive console at the bottom.</summary>
 public sealed class MainForm : Form
 {
     sealed record FsNode(string Path, bool IsDirectory);
@@ -20,6 +19,7 @@ public sealed class MainForm : Form
     readonly IdeProject _project;
     readonly StartForm _startForm;
     readonly bool _serverCapable;
+    readonly bool _packageCapable;
 
     readonly TreeView _tree = new()
     {
@@ -37,8 +37,10 @@ public sealed class MainForm : Form
     readonly ProcessRunner _runner = new();
     readonly ProcessRunner _server = new();
 
-    ToolStripMenuItem _runItem = null!, _serverStartItem = null!, _serverStopItem = null!;
+    ToolStripMenuItem _runItem = null!, _serverStartItem = null!, _serverStopItem = null!, _packageItem = null!;
     bool _exitRequested;
+    bool _preparing;
+    bool _refreshAfterExit;
     string? _serverUrl;
 
     public MainForm(IdeProject project, StartForm startForm)
@@ -46,10 +48,11 @@ public sealed class MainForm : Form
         _project = project;
         _startForm = startForm;
         _serverCapable = project.Language?.SupportsServer(project.Template) == true;
+        _packageCapable = project.Language?.PackageManagerName is not null;
 
         Text = $"{project.Name} - inpsIDE";
         AutoScaleMode = AutoScaleMode.Dpi;
-        ClientSize = new Size(1280, 780);   // size used when the user restores the window
+        ClientSize = new Size(1280, 780);
         StartPosition = FormStartPosition.CenterScreen;
         WindowState = FormWindowState.Maximized;
 
@@ -65,13 +68,14 @@ public sealed class MainForm : Form
 
     string DescribeRuntime()
     {
-        if (_project.Language is not { } language) return "Ready (this project has no language runtime).";
+        if (_project.Language is not { } language)
+        {
+            return "Ready (this project has no language runtime).";
+        }
         return _project.RuntimeExecutable is { } exe
             ? $"{language.DisplayName} runtime: {exe}"
             : $"No {language.DisplayName} runtime found in this project (running is disabled).";
     }
-
-    // ------------------------------------------------------------------ UI
 
     void BuildUi()
     {
@@ -85,27 +89,45 @@ public sealed class MainForm : Form
         _tree.BeforeExpand += (_, e) =>
         {
             if (e.Node is { } node && node.Nodes.Count == 1 && node.Nodes[0].Name == PlaceholderName)
+            {
                 PopulateDirectory(node);
+            }
         };
         _tree.NodeMouseDoubleClick += (_, e) =>
         {
-            if (e.Node.Tag is FsNode { IsDirectory: false } file) OpenFile(file.Path);
+            if (e.Node.Tag is FsNode { IsDirectory: false } file)
+            {
+                OpenFile(file.Path);
+            }
         };
         _tree.NodeMouseClick += (_, e) =>
         {
-            if (e.Button == MouseButtons.Right) _tree.SelectedNode = e.Node;
+            if (e.Button == MouseButtons.Right)
+            {
+                _tree.SelectedNode = e.Node;
+            }
         };
         _tree.KeyDown += (_, e) =>
         {
-            if (e.KeyCode == Keys.Delete) DeleteSelected();
-            else if (e.KeyCode == Keys.Enter && SelectedFs is { IsDirectory: false } file) OpenFile(file.Path);
+            if (e.KeyCode == Keys.Delete)
+            {
+                DeleteSelected();
+            }
+            else if (e.KeyCode == Keys.Enter && SelectedFs is { IsDirectory: false } file)
+            {
+                OpenFile(file.Path);
+            }
         };
         _tree.ContextMenuStrip = BuildTreeMenu();
 
         _tabs.SelectedIndexChanged += (_, _) => UpdateCaretStatus();
         _tabs.MouseUp += (_, e) =>
         {
-            if (e.Button != MouseButtons.Middle) return;
+            if (e.Button != MouseButtons.Middle)
+            {
+                return;
+            }
+
             for (int i = 0; i < _tabs.TabCount; i++)
             {
                 if (_tabs.GetTabRect(i).Contains(e.Location) && _tabs.TabPages[i] is EditorTab tab)
@@ -130,7 +152,6 @@ public sealed class MainForm : Form
         MainMenuStrip = menu;
         main.BringToFront();
 
-        // Shown (not Load): the window is maximized by then, so the splitters get the real height.
         Shown += (_, _) =>
         {
             TrySplit(main, 260);
@@ -140,15 +161,23 @@ public sealed class MainForm : Form
 
     static void TrySplit(SplitContainer container, int distance)
     {
-        try { container.SplitterDistance = Math.Max(distance, container.Panel1MinSize); }
+        try
+        {
+            container.SplitterDistance = Math.Max(distance, container.Panel1MinSize);
+        }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException) { }
     }
 
     MenuStrip BuildMenu()
     {
+        string packageText = _project.Language?.PackageManagerName is { } manager
+            ? $"Run &{manager} Command..."
+            : "Run Package &Manager Command...";
+
         _runItem = Item("&Run Current File", Keys.F5, RunCurrentFile);
         _serverStartItem = Item("&Start Web Server", Keys.Control | Keys.F5, StartServer);
         _serverStopItem = Item("S&top Web Server", Keys.Shift | Keys.F5, StopServer);
+        _packageItem = Item(packageText, Keys.Control | Keys.Shift | Keys.P, () => _ = RunPackageCommandAsync());
 
         var file = new ToolStripMenuItem("&File");
         file.DropDownItems.AddRange(new ToolStripItem[]
@@ -163,16 +192,20 @@ public sealed class MainForm : Form
         });
 
         var run = new ToolStripMenuItem("&Run");
-        run.DropDownItems.AddRange(new ToolStripItem[] { _runItem, new ToolStripSeparator(), _serverStartItem, _serverStopItem });
+        run.DropDownItems.AddRange(new ToolStripItem[]
+        {
+            _runItem,
+            new ToolStripSeparator(),
+            _serverStartItem,
+            _serverStopItem,
+            new ToolStripSeparator(),
+            _packageItem
+        });
 
         var help = new ToolStripMenuItem("&Help");
-        //help.DropDownItems.Add(Item("&About inpsIDE", Keys.None, () =>
-        //    MessageBox.Show(this,
-        //        $"inpsIDE\nA lightweight IDE for {LanguageRegistry.DescribeAll()}, built with C# WinForms on .NET 10.",
-        //        "About", MessageBoxButtons.OK, MessageBoxIcon.Information)));
         help.DropDownItems.Add(Item("&About inpsIDE", Keys.None, () =>
             MessageBox.Show(this,
-                $"inpsIDE\nThe official IDE made by inpsStudio, built with C# WinForms on .NET 10.",
+                "inpsIDE\nThe official IDE made by inpsStudio, built with C# WinForms on .NET 10.",
                 "About", MessageBoxButtons.OK, MessageBoxIcon.Information)));
 
         var menu = new MenuStrip();
@@ -183,7 +216,10 @@ public sealed class MainForm : Form
     static ToolStripMenuItem Item(string text, Keys shortcut, Action onClick)
     {
         var item = new ToolStripMenuItem(text);
-        if (shortcut != Keys.None) item.ShortcutKeys = shortcut;
+        if (shortcut != Keys.None)
+        {
+            item.ShortcutKeys = shortcut;
+        }
         item.Click += (_, _) => onClick();
         return item;
     }
@@ -197,7 +233,7 @@ public sealed class MainForm : Form
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(deleteItem);
         menu.Items.Add(Item("&Refresh", Keys.None, RefreshSelected));
-        menu.Opening += (_, _) => deleteItem.Enabled = _tree.SelectedNode?.Parent is not null; // never the root
+        menu.Opening += (_, _) => deleteItem.Enabled = _tree.SelectedNode?.Parent is not null;
         return menu;
     }
 
@@ -223,13 +259,10 @@ public sealed class MainForm : Form
             g.DrawRectangle(edgePen, 3, 1, 9, 13);
         }
 
-        // Index order matches FolderIcon / FileIcon. The ImageList keeps using these bitmaps, so they are not disposed.
         list.Images.Add(folder);
         list.Images.Add(file);
         return list;
     }
-
-    // ------------------------------------------------------------------ project tree
 
     FsNode? SelectedFs => _tree.SelectedNode?.Tag as FsNode;
 
@@ -245,13 +278,16 @@ public sealed class MainForm : Form
             root.Expand();
             _tree.SelectedNode = root;
         }
-        finally { _tree.EndUpdate(); }
+        finally
+        {
+            _tree.EndUpdate();
+        }
     }
 
     static TreeNode CreateDirectoryNode(string path, string text)
     {
         var node = new TreeNode(text, FolderIcon, FolderIcon) { Tag = new FsNode(path, true) };
-        node.Nodes.Add(new TreeNode("...") { Name = PlaceholderName }); // makes the expand arrow appear; replaced lazily
+        node.Nodes.Add(new TreeNode("...") { Name = PlaceholderName });
         return node;
     }
 
@@ -263,9 +299,13 @@ public sealed class MainForm : Form
         {
             var dir = new DirectoryInfo(fs.Path);
             foreach (DirectoryInfo d in dir.EnumerateDirectories().OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase))
+            {
                 node.Nodes.Add(CreateDirectoryNode(d.FullName, d.Name));
+            }
             foreach (FileInfo f in dir.EnumerateFiles().OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase))
+            {
                 node.Nodes.Add(new TreeNode(f.Name, FileIcon, FileIcon) { Tag = new FsNode(f.FullName, false) });
+            }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -277,12 +317,21 @@ public sealed class MainForm : Form
     {
         foreach (TreeNode node in nodes)
         {
-            if (node.Tag is not FsNode { IsDirectory: true } fs) continue;
-            if (string.Equals(fs.Path, path, StringComparison.OrdinalIgnoreCase)) return node;
+            if (node.Tag is not FsNode { IsDirectory: true } fs)
+            {
+                continue;
+            }
+            if (string.Equals(fs.Path, path, StringComparison.OrdinalIgnoreCase))
+            {
+                return node;
+            }
             if (FileUtil.IsSameOrUnder(path, fs.Path))
             {
                 TreeNode? found = FindDirectoryNode(node.Nodes, path);
-                if (found is not null) return found;
+                if (found is not null)
+                {
+                    return found;
+                }
             }
         }
         return null;
@@ -291,14 +340,21 @@ public sealed class MainForm : Form
     void RefreshDirectory(string path)
     {
         TreeNode? node = FindDirectoryNode(_tree.Nodes, path);
-        if (node is null) return;
+        if (node is null)
+        {
+            return;
+        }
+
         PopulateDirectory(node);
         node.Expand();
     }
 
     void RefreshSelected()
     {
-        if (SelectedFs is not { } fs) return;
+        if (SelectedFs is not { } fs)
+        {
+            return;
+        }
         RefreshDirectory(fs.IsDirectory ? fs.Path : Path.GetDirectoryName(fs.Path)!);
     }
 
@@ -314,7 +370,10 @@ public sealed class MainForm : Form
         string directory = TargetDirectory();
         string defaultName = _project.Language?.NewFileName ?? "untitled.txt";
         string? name = PromptForm.Ask(this, isFolder ? "New Folder" : "New File", "Name:", isFolder ? "" : defaultName);
-        if (string.IsNullOrWhiteSpace(name)) return;
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return;
+        }
 
         if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
         {
@@ -331,8 +390,14 @@ public sealed class MainForm : Form
 
         try
         {
-            if (isFolder) Directory.CreateDirectory(path);
-            else SimpleFileHandler.Write(path, LanguageRegistry.ForFile(path)?.NewFileContent(path) ?? "");
+            if (isFolder)
+            {
+                Directory.CreateDirectory(path);
+            }
+            else
+            {
+                SimpleFileHandler.Write(path, LanguageRegistry.ForFile(path)?.NewFileContent(path) ?? "");
+            }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -341,17 +406,26 @@ public sealed class MainForm : Form
         }
 
         RefreshDirectory(directory);
-        if (!isFolder) OpenFile(path);
+        if (!isFolder)
+        {
+            OpenFile(path);
+        }
     }
 
     void DeleteSelected()
     {
-        if (SelectedFs is not { } fs || _tree.SelectedNode?.Parent is null) return; // the root cannot be deleted
+        if (SelectedFs is not { } fs || _tree.SelectedNode?.Parent is null)
+        {
+            return;
+        }
 
         string kind = fs.IsDirectory ? "folder (and everything in it)" : "file";
         var answer = MessageBox.Show(this, $"Permanently delete this {kind}?\n\n{fs.Path}", "Delete",
             MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
-        if (answer != DialogResult.Yes) return;
+        if (answer != DialogResult.Yes)
+        {
+            return;
+        }
 
         foreach (EditorTab tab in Tabs.Where(t => FileUtil.IsSameOrUnder(t.FilePath, fs.Path)).ToList())
         {
@@ -361,8 +435,14 @@ public sealed class MainForm : Form
 
         try
         {
-            if (fs.IsDirectory) Directory.Delete(fs.Path, recursive: true);
-            else File.Delete(fs.Path);
+            if (fs.IsDirectory)
+            {
+                Directory.Delete(fs.Path, recursive: true);
+            }
+            else
+            {
+                File.Delete(fs.Path);
+            }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -372,11 +452,8 @@ public sealed class MainForm : Form
         RefreshDirectory(Path.GetDirectoryName(fs.Path)!);
     }
 
-    // ------------------------------------------------------------------ editor tabs
-
     void OpenInitialFile()
     {
-        // Template entry file first, then the language's usual suspects (all languages if the project has none), then the README.
         IEnumerable<string> languageFiles = _project.Language?.InitialFileCandidates
             ?? LanguageRegistry.All.SelectMany(l => l.InitialFileCandidates);
 
@@ -421,7 +498,13 @@ public sealed class MainForm : Form
             }
 
             var tab = new EditorTab(path);
-            tab.Editor.CaretMoved += (_, _) => { if (_tabs.SelectedTab == tab) UpdateCaretStatus(); };
+            tab.Editor.CaretMoved += (_, _) =>
+            {
+                if (_tabs.SelectedTab == tab)
+                {
+                    UpdateCaretStatus();
+                }
+            };
             _tabs.TabPages.Add(tab);
             _tabs.SelectedTab = tab;
             tab.Editor.Focus();
@@ -448,22 +531,32 @@ public sealed class MainForm : Form
 
     void SaveCurrent()
     {
-        if (_tabs.SelectedTab is EditorTab tab && TrySave(tab)) SetStatus($"Saved {tab.FilePath}");
+        if (_tabs.SelectedTab is EditorTab tab && TrySave(tab))
+        {
+            SetStatus($"Saved {tab.FilePath}");
+        }
     }
 
     void SaveAll()
     {
         foreach (EditorTab tab in Tabs.Where(t => t.Editor.IsDirty).ToList())
-            if (!TrySave(tab)) return;
+        {
+            if (!TrySave(tab))
+            {
+                return;
+            }
+        }
         SetStatus("All files saved.");
     }
 
     void CloseCurrentTab()
     {
-        if (_tabs.SelectedTab is EditorTab tab) CloseTab(tab);
+        if (_tabs.SelectedTab is EditorTab tab)
+        {
+            CloseTab(tab);
+        }
     }
 
-    /// <returns>false if the user cancelled.</returns>
     bool CloseTab(EditorTab tab)
     {
         if (tab.Editor.IsDirty)
@@ -471,8 +564,14 @@ public sealed class MainForm : Form
             _tabs.SelectedTab = tab;
             var answer = MessageBox.Show(this, $"Save changes to {Path.GetFileName(tab.FilePath)}?", "inpsIDE",
                 MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
-            if (answer == DialogResult.Cancel) return false;
-            if (answer == DialogResult.Yes && !TrySave(tab)) return false;
+            if (answer == DialogResult.Cancel)
+            {
+                return false;
+            }
+            if (answer == DialogResult.Yes && !TrySave(tab))
+            {
+                return false;
+            }
         }
 
         _tabs.TabPages.Remove(tab);
@@ -493,17 +592,21 @@ public sealed class MainForm : Form
         }
     }
 
-    // ------------------------------------------------------------------ running (language independent)
-
-    /// <summary>The process that currently receives console input.</summary>
     ProcessRunner? ActiveProcess => _runner.IsRunning ? _runner : _server.IsRunning ? _server : null;
 
     void WireRunners()
     {
-        // Output goes straight into the console's thread safe queue; no marshalling needed.
         _runner.OutputReceived += _console.Write;
         _server.OutputReceived += _console.Write;
-        _runner.Exited += code => OnUi(() => OnProcessExited($"[Process exited with code {code}]"));
+        _runner.Exited += code => OnUi(() =>
+        {
+            OnProcessExited($"[Process exited with code {code}]");
+            if (_refreshAfterExit)
+            {
+                _refreshAfterExit = false;
+                RefreshDirectory(_project.RootPath);
+            }
+        });
         _server.Exited += code => OnUi(() => OnProcessExited($"[Web server stopped, exit code {code}]"));
 
         _console.InputSubmitted += SendInput;
@@ -517,9 +620,11 @@ public sealed class MainForm : Form
 
     void SendInput(string line)
     {
-        if (ActiveProcess is not { } process) return;
+        if (ActiveProcess is not { } process)
+        {
+            return;
+        }
 
-        // The child's stdin is a pipe, so nothing echoes what was typed: do it here (queued after the prompt it answers).
         _console.WriteLine(line);
         process.SendLine(line);
     }
@@ -529,7 +634,10 @@ public sealed class MainForm : Form
         bool inputHadFocus = _console.InputFocused;
         _console.WriteLine(message);
         UpdateRunState();
-        if (inputHadFocus && !_console.ProcessRunning) (_tabs.SelectedTab as EditorTab)?.Editor.Focus();
+        if (inputHadFocus && !_console.ProcessRunning)
+        {
+            (_tabs.SelectedTab as EditorTab)?.Editor.Focus();
+        }
     }
 
     void RunCurrentFile()
@@ -539,31 +647,114 @@ public sealed class MainForm : Form
             SetStatus("Open a file first.");
             return;
         }
-        if (_runner.IsRunning) return;
+        if (_runner.IsRunning || _preparing)
+        {
+            return;
+        }
 
-        // The file's own language decides how it is run, so a project may mix languages.
         LanguageSupport? language = LanguageRegistry.ForFile(tab.FilePath);
         if (language is null || !language.CanRun(tab.FilePath))
         {
             SetStatus("inpsIDE doesn't know how to run this kind of file.");
             return;
         }
-        if (RequireRuntime(language) is not { } executable) return;
-        if (tab.Editor.IsDirty && !TrySave(tab)) return;
+        if (RequireRuntime(language) is not { } executable)
+        {
+            return;
+        }
+        if (tab.Editor.IsDirty && !TrySave(tab))
+        {
+            return;
+        }
 
         _console.Clear();
         Launch(_runner, language.CreateRunFileCommand(executable, _project.RootPath, tab.FilePath));
     }
 
+    async Task RunPackageCommandAsync()
+    {
+        if (_runner.IsRunning || _preparing)
+        {
+            return;
+        }
+        if (_project.Language is not { PackageManagerName: not null } language)
+        {
+            SetStatus("This project type has no package manager.");
+            return;
+        }
+
+        string manager = language.PackageManagerName!;
+        if (RequireRuntime(language) is not { } executable)
+        {
+            return;
+        }
+
+        string? input = PromptForm.Ask(this, $"Run {manager} command", $"{manager} arguments (for example: install <package>):");
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return;
+        }
+
+        List<string> arguments = ArgumentParser.Split(input);
+        if (arguments.Count > 0 && string.Equals(arguments[0], manager, StringComparison.OrdinalIgnoreCase))
+        {
+            arguments.RemoveAt(0);
+        }
+        if (arguments.Count == 0)
+        {
+            SetStatus($"Enter the arguments to pass to {manager}.");
+            return;
+        }
+
+        SaveAll();
+        _preparing = true;
+        UpdateRunState();
+        SetStatus($"Preparing {manager}...");
+
+        string? problem;
+        try
+        {
+            problem = await Task.Run(() => language.PreparePackageManager(executable, _project.RootPath));
+        }
+        finally
+        {
+            _preparing = false;
+        }
+
+        if (problem is not null)
+        {
+            _console.WriteLine(problem);
+            UpdateRunState();
+            return;
+        }
+
+        RunCommand? command = language.CreatePackageCommand(executable, _project.RootPath, arguments);
+        if (command is null)
+        {
+            UpdateRunState();
+            MessageBox.Show(this, $"{manager} could not be found in this project's runtime.", "inpsIDE", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        _console.Clear();
+        _refreshAfterExit = Launch(_runner, command);
+    }
+
     void StartServer()
     {
-        if (_server.IsRunning) return;
+        if (_server.IsRunning)
+        {
+            return;
+        }
         if (_project.Language is not { } language || !_serverCapable)
         {
             SetStatus("This project type has no web server.");
             return;
         }
-        if (RequireRuntime(language) is not { } executable) return;
+        if (RequireRuntime(language) is not { } executable)
+        {
+            return;
+        }
 
         SaveAll();
         if (language.CreateServerCommand(executable, _project.RootPath, _project.Template) is not { } command)
@@ -573,8 +764,14 @@ public sealed class MainForm : Form
         }
 
         _serverUrl = command.Url;
-        if (!Launch(_server, command)) return;
-        if (command.Url is not { } url) return;
+        if (!Launch(_server, command))
+        {
+            return;
+        }
+        if (command.Url is not { } url)
+        {
+            return;
+        }
 
         _console.WriteLine($"Web server starting on {url}");
         if (command.OpenBrowserDelayMs <= 0)
@@ -583,9 +780,14 @@ public sealed class MainForm : Form
         }
         else
         {
-            // Only open the browser if the server survived its start-up (e.g. Flask missing would end it at once).
             _ = Task.Delay(command.OpenBrowserDelayMs).ContinueWith(
-                _ => OnUi(() => { if (_server.IsRunning) OpenBrowser(url); }),
+                _ => OnUi(() =>
+                {
+                    if (_server.IsRunning)
+                    {
+                        OpenBrowser(url);
+                    }
+                }),
                 TaskScheduler.Default);
         }
     }
@@ -626,15 +828,19 @@ public sealed class MainForm : Form
 
     static void OpenBrowser(string url)
     {
-        try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }
-        catch (Win32Exception) { /* no default browser registered - the URL is in the console anyway */ }
+        try
+        {
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+        }
+        catch (Win32Exception) { }
     }
 
     void UpdateRunState()
     {
-        _runItem.Enabled = !_runner.IsRunning;
+        _runItem.Enabled = !_runner.IsRunning && !_preparing;
         _serverStartItem.Enabled = _serverCapable && !_server.IsRunning;
         _serverStopItem.Enabled = _server.IsRunning;
+        _packageItem.Enabled = _packageCapable && !_runner.IsRunning && !_preparing;
         _console.ProcessRunning = _runner.IsRunning || _server.IsRunning;
 
         SetStatus(_server.IsRunning
@@ -642,19 +848,23 @@ public sealed class MainForm : Form
             : _runner.IsRunning ? "Running..." : "Ready");
     }
 
-    // ------------------------------------------------------------------ helpers
-
     void SetStatus(string message) => _statusMessage.Text = message;
 
     void ShowError(Exception ex) =>
         MessageBox.Show(this, ex.Message, "inpsIDE", MessageBoxButtons.OK, MessageBoxIcon.Error);
 
-    /// <summary>Marshals work from a background thread (process events) to the UI thread.</summary>
     void OnUi(Action action)
     {
-        if (IsDisposed || !IsHandleCreated) return;
-        try { BeginInvoke(action); }
-        catch (InvalidOperationException) { /* form closed in the meantime */ }
+        if (IsDisposed || !IsHandleCreated)
+        {
+            return;
+        }
+
+        try
+        {
+            BeginInvoke(action);
+        }
+        catch (InvalidOperationException) { }
     }
 
     void ExitApplication()
@@ -666,7 +876,10 @@ public sealed class MainForm : Form
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
         base.OnFormClosing(e);
-        if (e.Cancel) return;
+        if (e.Cancel)
+        {
+            return;
+        }
 
         foreach (EditorTab tab in Tabs.ToList())
         {
@@ -685,7 +898,13 @@ public sealed class MainForm : Form
         _runner.Dispose();
         _server.Dispose();
 
-        if (_exitRequested) _startForm.Close(); // the start form is the app's main form, so this ends the program
-        else _startForm.ShowAgain();
+        if (_exitRequested)
+        {
+            _startForm.Close();
+        }
+        else
+        {
+            _startForm.ShowAgain();
+        }
     }
 }

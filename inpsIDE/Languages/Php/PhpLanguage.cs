@@ -120,7 +120,9 @@ public sealed class PhpLanguage : LanguageSupport
         "Create the project from a PHP template (with the PHP zip embedded) or copy a PHP build into that folder.";
 
     public override RunCommand CreateRunFileCommand(string executable, string projectRoot, string filePath) => new(executable, ["-f", filePath], projectRoot, $"php -f \"{filePath}\"");
+
     public override bool SupportsServer(ProjectTemplate? template) => template is not { Kind: ProjectKind.Console };
+
     public override RunCommand? CreateServerCommand(string executable, string projectRoot, ProjectTemplate? template)
     {
         string pub = Path.Combine(projectRoot, "public");

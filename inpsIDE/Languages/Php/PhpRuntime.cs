@@ -8,6 +8,7 @@ public static class PhpRuntime
     const string ResourcePrefix = "inpsIDE.Resources.";
     static readonly Assembly Host = typeof(PhpRuntime).Assembly;
     static readonly string[] EnabledExtensions = ["curl", "fileinfo", "mbstring", "openssl", "pdo_sqlite", "sqlite3"];
+
     public static string? FindEmbeddedZipName()
     {
         string? name = Host.GetManifestResourceNames().FirstOrDefault(n =>

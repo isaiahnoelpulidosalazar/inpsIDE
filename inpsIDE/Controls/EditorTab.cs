@@ -1,6 +1,5 @@
 namespace inpsIDE.Controls;
 
-/// <summary>A tab page hosting one <see cref="CodeEditor"/> for one file.</summary>
 public sealed class EditorTab : TabPage
 {
     public CodeEditor Editor { get; }

@@ -5,7 +5,6 @@ using inpsIDE.Services;
 
 namespace inpsIDE.Forms;
 
-/// <summary>"Create new project": pick a language filter, a project type, a name and a location, then Create / Cancel.</summary>
 public sealed class ProjectTypeForm : Form
 {
     const string DefaultDescription = "Select a project type above.";
@@ -19,7 +18,7 @@ public sealed class ProjectTypeForm : Form
     readonly Button _cancel = new() { Text = "Cancel", Size = new Size(100, 32), DialogResult = DialogResult.Cancel };
 
     ClickableElement? _selectedElement;
-    string? _filterId; // null = all languages, "" = projects without a language, otherwise a language id
+    string? _filterId;
 
     public ProjectTemplate? SelectedTemplate { get; private set; }
     public string ProjectName => _name.Text.Trim();
@@ -41,7 +40,10 @@ public sealed class ProjectTypeForm : Form
         _name.Text = SuggestName(_location.Text);
 
         _filter.Items.Add("All languages");
-        foreach (LanguageSupport language in LanguageRegistry.All) _filter.Items.Add(language.DisplayName);
+        foreach (LanguageSupport language in LanguageRegistry.All)
+        {
+            _filter.Items.Add(language.DisplayName);
+        }
         _filter.Items.Add("Other");
         _filter.SelectedIndex = 0;
 
@@ -71,7 +73,10 @@ public sealed class ProjectTypeForm : Form
         browse.Click += (_, _) =>
         {
             using var dialog = new FolderBrowserDialog { Description = "Choose where the project folder will be created", UseDescriptionForTitle = true, InitialDirectory = ExistingParent(_location.Text) };
-            if (dialog.ShowDialog(this) == DialogResult.OK) _location.Text = dialog.SelectedPath;
+            if (dialog.ShowDialog(this) == DialogResult.OK)
+            {
+                _location.Text = dialog.SelectedPath;
+            }
         };
 
         var fields = new TableLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, ColumnCount = 3, RowCount = 2 };
@@ -91,12 +96,12 @@ public sealed class ProjectTypeForm : Form
 
         var root = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 6, Padding = new Padding(12) };
         root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));        // header
-        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));        // language filter
-        root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));    // list
-        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));        // description
-        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));        // name + location
-        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));        // buttons
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.Controls.Add(header, 0, 0);
         root.Controls.Add(filterRow, 0, 1);
         root.Controls.Add(_list, 0, 2);
@@ -106,11 +111,13 @@ public sealed class ProjectTypeForm : Form
         Controls.Add(root);
     }
 
-    /// <summary>Rebuilds the list for the current language filter (and clears the selection).</summary>
     void PopulateList()
     {
         _list.SuspendLayout();
-        foreach (Control c in _list.Controls.Cast<Control>().ToList()) c.Dispose();
+        foreach (Control c in _list.Controls.Cast<Control>().ToList())
+        {
+            c.Dispose();
+        }
 
         _selectedElement = null;
         SelectedTemplate = null;
@@ -118,7 +125,9 @@ public sealed class ProjectTypeForm : Form
         _description.Text = DefaultDescription;
 
         foreach (ProjectTemplate template in TemplateCatalog.All.Where(t => _filterId is null || (t.LanguageId ?? "") == _filterId))
+        {
             AddTemplate(template);
+        }
 
         _list.ResumeLayout(true);
         _list.AutoScrollPosition = Point.Empty;
@@ -134,8 +143,13 @@ public sealed class ProjectTypeForm : Form
     void SelectTemplate(ProjectTemplate template, ClickableElement element)
     {
         if (_selectedElement is not null && _selectedElement != element && _selectedElement.IsToggled())
+        {
             _selectedElement.Toggle();
-        if (!element.IsToggled()) element.Toggle();
+        }
+        if (!element.IsToggled())
+        {
+            element.Toggle();
+        }
 
         _selectedElement = element;
         SelectedTemplate = template;
@@ -146,14 +160,22 @@ public sealed class ProjectTypeForm : Form
     void TryAccept()
     {
         string? error = ProjectService.ValidateName(ProjectName);
-        if (error is null && !Path.IsPathRooted(ProjectLocation)) error = "Please enter a full folder path as the location.";
-        if (error is null && SelectedTemplate is null) error = "Please select a project type.";
+        if (error is null && !Path.IsPathRooted(ProjectLocation))
+        {
+            error = "Please enter a full folder path as the location.";
+        }
+        if (error is null && SelectedTemplate is null)
+        {
+            error = "Please select a project type.";
+        }
 
         if (error is null)
         {
             string target = Path.Combine(ProjectLocation, ProjectName);
             if (Directory.Exists(target) && Directory.EnumerateFileSystemEntries(target).Any())
+            {
                 error = $"'{target}' already exists and is not empty.";
+            }
         }
 
         if (error is not null)
@@ -169,7 +191,10 @@ public sealed class ProjectTypeForm : Form
     {
         const string baseName = "MyProject";
         string name = baseName;
-        for (int i = 2; Directory.Exists(Path.Combine(location, name)); i++) name = baseName + i;
+        for (int i = 2; Directory.Exists(Path.Combine(location, name)); i++)
+        {
+            name = baseName + i;
+        }
         return name;
     }
 
@@ -178,8 +203,14 @@ public sealed class ProjectTypeForm : Form
         try
         {
             string? dir = path;
-            while (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir)) dir = Path.GetDirectoryName(dir);
-            if (!string.IsNullOrEmpty(dir)) return dir;
+            while (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+            {
+                dir = Path.GetDirectoryName(dir);
+            }
+            if (!string.IsNullOrEmpty(dir))
+            {
+                return dir;
+            }
         }
         catch (ArgumentException) { }
         return Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
